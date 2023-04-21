@@ -9,7 +9,7 @@
 #define OLED_RESET 4
 Adafruit_SSD1306 display(SCREEN_WIDTH, SCREEN_HEIGHT, &Wire, OLED_RESET);
 
-bool hardness = 0;
+bool hardness = 1;
 int time = 50;
 int loop_c = 0;
 int cnt = 0;
@@ -74,14 +74,14 @@ static const bool Gun[8][8] = {
 };
 
 static const bool Prize[8][8] = {
-{0,0,0,1,1,0,0,0},
-{0,0,1,0,1,1,0,0},
-{0,1,0,0,1,1,1,0},
-{0,1,0,1,1,1,1,0},
-{0,1,0,1,1,1,1,0},
-{0,1,0,0,1,1,1,0},
-{0,0,1,0,1,1,0,0},
-{0,0,0,1,1,0,0,0}
+{0,0,0,0,1,0,0,0},
+{0,0,1,1,1,1,0,0},
+{0,1,1,1,1,1,1,0},
+{0,1,1,1,1,1,1,0},
+{1,0,0,1,1,1,1,1},
+{1,1,1,1,1,1,1,1},
+{0,1,1,0,0,1,1,0},
+{0,0,0,0,0,0,0,0}
 };
 
 static const bool NTouch[8][8] = {
@@ -95,6 +95,21 @@ static const bool NTouch[8][8] = {
 {0,0,0,1,1,0,0,0}
 };
 
+static const bool Shield[12][12] = {
+{0,0,0,1,1,1,1,1,1,0,0,0},
+{0,0,1,0,0,0,0,0,0,1,0,0},
+{0,1,0,0,0,0,0,0,0,0,1,0},
+{1,0,0,0,0,0,0,0,0,0,0,1},
+{1,0,0,0,0,0,0,0,0,0,0,1},
+{1,0,0,0,0,0,0,0,0,0,0,1},
+{1,0,0,0,0,0,0,0,0,0,0,1},
+{1,0,0,0,0,0,0,0,0,0,0,1},
+{1,0,0,0,0,0,0,0,0,0,0,1},
+{0,1,0,0,0,0,0,0,0,0,1,0},
+{0,0,1,0,0,0,0,0,0,1,0,0},
+{0,0,0,1,1,1,1,1,1,0,0,0},
+};
+
 static int rocket_loc[2] = {0,4};
 int life = 3;
 int gun = 3;
@@ -105,6 +120,19 @@ int prs = 0;
 
 void setup()
 {
+
+rocket_loc[0] = 0;
+rocket_loc[1] = 4;
+life = 3;
+gun = 3;
+gun_exec = 0;
+bullet[0] = -1;
+bullet[1] = -1;
+tch = 0;
+prs = 0;
+
+  randomSeed(112315122);
+  
   pinMode(A0, INPUT);
   pinMode(A1, INPUT);
   
@@ -141,8 +169,6 @@ void setup()
   pinMode(41, OUTPUT);
 
   pinMode(42, OUTPUT);
-
-  digitalWrite(23,1);
 
   display.begin(SSD1306_SWITCHCAPVCC, 0x3D);
   display.clearDisplay();
@@ -200,7 +226,7 @@ void setup()
         display.setTextColor(SSD1306_BLACK);        // Draw white text
       }
       display.setCursor(40,8);           // Start at top-left corner
-      if(hardness){
+      if(!hardness){
          display.println(F("EASY"));
       }else{
         display.println(F("HARD"));
@@ -234,7 +260,7 @@ void setup()
         display.setTextColor(SSD1306_WHITE);        // Draw white text
       }
       display.setCursor(40,8);             // Start at top-left corner
-      if(hardness){
+      if(!hardness){
          display.println(F("EASY"));
       }else{
         display.println(F("HARD"));
@@ -254,6 +280,18 @@ void draw(bool Obj[8][8],int x, int y,bool t){
           display.drawPixel(x*8+i, y*8+j, SSD1306_WHITE);
         else
           display.drawPixel(x*8+i, y*8+j, SSD1306_BLACK);
+    }
+  }  
+}
+
+void draw_shield(bool Obj[12][12],int x, int y,bool t){
+  for(int i=0 ; i<12 ; i++){
+    for(int j=0 ; j<12 ; j++){
+      if(Obj[i][j] == 1)
+        if(!t)
+          display.drawPixel(x*8+i-2, y*8+j-2, SSD1306_WHITE);
+        else
+          display.drawPixel(x*8+i-2, y*8+j-2, SSD1306_BLACK);
     }
   }  
 }
@@ -289,24 +327,23 @@ int get_loc(int sensorValue){
 }
 
 void gen_met(){
-int randomness = 5;
   if(b_c_a<obj_size){
     int lr = Objects[b_c_a][1] = random(0,2);
     Objects[b_c_a][0] = 15;
     Objects[b_c_a][1] = lr;
-    Objects[b_c_a][2] = random(0,randomness);
+    Objects[b_c_a][2] = random(0,5);
     b_c_a +=1;
     Objects[b_c_a][0] = 15;
     Objects[b_c_a][1] = lr+2;
-    Objects[b_c_a][2] = random(0,randomness);
+    Objects[b_c_a][2] = random(0,5);
     b_c_a +=1;
     Objects[b_c_a][0] = 15;
     Objects[b_c_a][1] = lr+4;
-    Objects[b_c_a][2] = random(0,randomness);
+    Objects[b_c_a][2] = random(0,5);
     b_c_a +=1;
     Objects[b_c_a][0] = 15;
     Objects[b_c_a][1] = lr+6;
-    Objects[b_c_a][2] = random(0,randomness);
+    Objects[b_c_a][2] = random(0,5);
     b_c_a +=1;
   }
   //engel = 0
@@ -337,6 +374,7 @@ void update_bar(int x){
 
 void loop()
 {
+  noTone(42); 
   digitalWrite(41,LOW);
   //rocket events
   int sensorValue = analogRead(A0);
@@ -388,6 +426,9 @@ void loop()
   }
 
   draw(Rocket,0,rocket_loc[1],lD);
+  if(tch){
+    draw_shield(Shield,0,rocket_loc[1],lD);
+  }
   display.display();
 
   int tmr = 0;
@@ -403,7 +444,6 @@ void loop()
         Objects[x][0] -= 1;
       }
     }
-
     draw(Rocket,0,rocket_loc[1],lD);
 
     //control coll
@@ -411,8 +451,10 @@ void loop()
       int ob = Objects[x][2];
       if(Objects[x][0] != -1){
         if(Objects[x][0] == rocket_loc[0] && Objects[x][1] == rocket_loc[1]){
+          update_bar(x);
           if(ob == 0 || ob == 4){
             if(tch == 0){
+              tone(42,1000);
               // - crushed
               life -= 1;
               tch = 4000;
@@ -424,13 +466,16 @@ void loop()
               }
             }
             else if(ob == 1){
-              
+              if(life <3)
+                life += 1;
             }
             else if(ob == 2){
+              //silah
               if(gun <3)
                 gun += 1;
             }
             else if(ob == 3){
+              //dokunulmazlık
               tch = 4000;
             }
           }
@@ -498,7 +543,6 @@ void loop()
         digitalWrite(22+i,LOW);
     }
     //  
-    tone(42,1000);
     // Gun
     digitalWrite(34,LOW);
     digitalWrite(35,LOW);
@@ -534,9 +578,20 @@ void loop()
 
     //zaman ayarlanması
     if(hardness){
-      if(loop_c == 10){
+      digitalWrite(41,HIGH);
+      display.setTextSize(1);             // Normal 1:1 pixel scale
+      if(lD){
+        display.setTextColor(SSD1306_BLACK);        // Draw white text
+      }else{
+        display.setTextColor(SSD1306_WHITE);        // Draw white text
+      }
+      display.setCursor(0,0); 
+      display.println(time);
+      display.display();
+      if(loop_c % 10 == 0){
         time = time-(time/5);
       }
+    }if(!hardness){
     }
     display.display();
     delay(time);
